@@ -21,10 +21,9 @@
  *
  * Você deve ter recebido uma cópia da Licença Pública Geral GNU
  * junto com o Manutenção Preventiva. Se não, veja <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [URL do seu plugin ou repositório GitHub]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -49,10 +48,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with Preventive Maintenance. If not, see <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [Your Plugin URL or GitHub Repository]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
  
@@ -65,15 +63,15 @@ function plugin_version_preventivemaintenance() {
     return [
         'name'           => 'Preventive Maintenance',
         'version'        => '1.0.0',
-        'author'         => 'WIDA',
+        'author'         => 'Generic',
         'license'        => 'GPLv2+',
-        'homepage'       => 'https://widatecnologia.com.br',
+        'homepage'       => 'https://example.com',
         'description'    => __('Gerencie manutenções preventivas de equipamentos.'),
         'minGlpiVersion' => '10.0.0',
         'requirements'   => [
             'glpi' => [
                 'min' => '10.0.0',
-                'max' => '11.0.0'
+                'max' => '12.0.0'
             ]
         ]
     ];
@@ -125,7 +123,7 @@ function plugin_preventivemaintenance_install() {
             KEY `technician_id` (`technician_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
-        $DB->queryOrDie($query, $DB->error());
+        $DB->doQuery($query);
     }
 
     // Tabela de tickets de manutenção
@@ -141,7 +139,7 @@ function plugin_preventivemaintenance_install() {
             KEY `computer_id` (`computer_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
-        $DB->queryOrDie($query, $DB->error());
+        $DB->doQuery($query);
     }
 
     // Tabela de configuração do plugin
@@ -157,7 +155,7 @@ function plugin_preventivemaintenance_install() {
             UNIQUE KEY `name` (`name`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
-        $DB->queryOrDie($query, $DB->error());
+        $DB->doQuery($query);
     }
 
     // 2. Registrar o plugin
@@ -203,6 +201,20 @@ function plugin_preventivemaintenance_install() {
         ]);
     }
 
+    // 4. Registrar ação automática (CronTask)
+    if (class_exists('CronTask')) {
+        CronTask::register(
+            'PluginPreventivemaintenancePreventivemaintenance',
+            'preventivemaintenance',
+            3600,
+            [
+                'mode'  => CronTask::MODE_EXTERNAL,
+                'state' => CronTask::STATE_WAITING,
+                'allow_private' => 1
+            ]
+        );
+    }
+
     return true;
 }
 //Função de desinstalação - remove tabelas, direitos e registro do plugin
@@ -220,7 +232,7 @@ function plugin_preventivemaintenance_uninstall() {
     
     foreach ($tables as $table) {
         if ($DB->tableExists($table)) {
-            $DB->query("DROP TABLE IF EXISTS `$table`");
+            $DB->doQuery("DROP TABLE IF EXISTS `$table`");
         }
     }
     
@@ -235,6 +247,11 @@ function plugin_preventivemaintenance_uninstall() {
     if ($plugin->getFromDBbyDir('preventivemaintenance')) {
         $plugin->delete(['id' => $plugin->getID()]);
     }
+
+    // 4. Remover ação automática (CronTask)
+    if (class_exists('CronTask')) {
+        CronTask::unregister('preventivemaintenance');
+    }
     
     return true;
 }
@@ -245,7 +262,7 @@ function plugin_init_preventivemaintenance() {
 
     $PLUGIN_HOOKS['csrf_compliant']['preventivemaintenance'] = true;
     $PLUGIN_HOOKS['config_page']['preventivemaintenance'] = 'front/preventivemaintenance.php';
-    $PLUGIN_HOOKS["menu_toadd"]['preventivemaintenance'] = array('plugins'  => 'PluginPreventivemaintenanceMenu');
+    $PLUGIN_HOOKS["menu_toadd"]['preventivemaintenance'] = array('tools'  => 'PluginPreventivemaintenanceMenu');
     $PLUGIN_HOOKS['rights']['preventivemaintenance'] = 'plugin_preventivemaintenance_getRights';
     $PLUGIN_HOOKS['menu_entry_icon']['preventivemaintenance'] = Plugin::getWebDir('preventivemaintenance', false) . '/pics/logopm.png';
     

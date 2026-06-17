@@ -21,10 +21,9 @@
  *
  * Você deve ter recebido uma cópia da Licença Pública Geral GNU
  * junto com o Manutenção Preventiva. Se não, veja <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [URL do seu plugin ou repositório GitHub]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -49,10 +48,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with Preventive Maintenance. If not, see <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [Your Plugin URL or GitHub Repository]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
  
@@ -66,7 +64,7 @@ Session::checkRight('plugin_preventivemaintenance', CREATE);
 
 // Conexão manual com o banco de dados
 // Manual database connection
-$DB = new DB();
+global $DB;
 $is_edit = isset($_GET['id']);
 $pm = new PluginPreventivemaintenancePreventivemaintenance();
 $item_data = [];
@@ -151,9 +149,19 @@ if (isset($_POST['add'])) {
             throw new Exception(__('Computador selecionado não encontrado.'));
         }
 
-        // Verifica se o computador pertence à entidade
-        // Checks if computer belongs to entity
-        if ($computer->fields['entities_id'] != $selected_entity_id) {
+        // Verifica se o computador pertence à entidade ou se é recursivo e pertence a uma entidade pai
+        // Checks if computer belongs to entity or is recursive and belongs to an ancestor entity
+        $is_valid_entity = false;
+        if ($computer->fields['entities_id'] == $selected_entity_id) {
+            $is_valid_entity = true;
+        } else if ($computer->fields['is_recursive'] == 1) {
+            $ancestors = getAncestorsOf("glpi_entities", $selected_entity_id);
+            if (in_array($computer->fields['entities_id'], $ancestors)) {
+                $is_valid_entity = true;
+            }
+        }
+
+        if (!$is_valid_entity) {
             throw new Exception(__('O computador selecionado não pertence à entidade escolhida.'));
         }
 
@@ -221,7 +229,7 @@ if (isset($_POST['add'])) {
                       WHERE id = ".(int)$input['id'];
             
             error_log("[QUERY] Update: " . $query);
-            $result = $DB->query($query);
+            $result = $DB->doQuery($query);
             
             if (!$result) {
                 error_log("[ERRO] Query falhou: " . $DB->error());
@@ -248,7 +256,7 @@ if (isset($_POST['add'])) {
                       )";
             
             error_log("[QUERY] Insert: " . $query);
-            $result = $DB->query($query);
+            $result = $DB->doQuery($query);
             
             if (!$result) {
                 error_log("[ERRO] Query falhou: " . $DB->error());
@@ -270,8 +278,10 @@ if (isset($_POST['add'])) {
 // Processa a seleção de perfis técnicos se enviado
 // Processes technician profiles selection if submitted
 if (isset($_POST['save_selected_profiles'])) {
+    error_log("[DEBUG] save_selected_profiles called");
     $_SESSION['plugin_preventivemaintenance_selected_profiles'] = $_POST['profiles'] ?? ['Technician'];
-    Html::back();
+    echo "ok";
+    exit();
 }
 
 // Configuração do formulário
@@ -280,6 +290,12 @@ $entity = new Entity();
 // Busca apenas as entidades ativas da sessão do usuário
 // Finds only active entities from user session
 $entities = $entity->find(['id' => $_SESSION['glpiactiveentities']], 'completename ASC');
+
+// Fetch all entity parent-child relationships for recursive assets check
+$parent_entities_map = [];
+foreach ($entity->find() as $ent) {
+    $parent_entities_map[(int)$ent['id']] = (int)$ent['entities_id'];
+}
 
 $computer = new Computer();
 $all_computers = $computer->find(['is_deleted' => 0], "name ASC");
@@ -298,14 +314,14 @@ $available_computers = array_filter($all_computers, function($comp) use ($blocke
     return !in_array($comp['id'], $blocked_computers);
 });
 
-$token = Session::getNewCSRFToken();
+
 
 // Exibe o cabeçalho do GLPI
 // Displays GLPI header
 Html::header(
     __('Manutenção Preventiva', 'preventivemaintenance'),
     $_SERVER['PHP_SELF'],
-    'plugins',
+    'tools',
     'preventivemaintenance'
 );
 ?>
@@ -313,10 +329,6 @@ Html::header(
 <!-- Estilos CSS para a interface -->
 <!-- CSS styles for interface -->
 <style>
-    body {
-        background-color: #cacccf !important;
-    }
-    
     #step2 {
         display: none;
     }
@@ -498,7 +510,7 @@ Html::header(
 
 <!-- HTML principal do formulário -->
 <!-- Main form HTML -->
-<div class='plugin-preventive-maintenance-container'>
+<div class='card mb-4 mx-auto p-4' style='max-width: 98%;'>
     <div class='d-flex justify-content-between align-items-center mb-4'>
         <h2>
             <i class='fas fa-calendar-check me-2'></i>
@@ -512,7 +524,7 @@ Html::header(
     <div class='card'>
         <div class='card-body'>
             <form method='post' id='preventive_maintenance_form'>
-                <?php echo Html::hidden('_glpi_csrf_token', ['value' => $token]); ?>
+                <?php echo Html::hidden('_glpi_csrf_token', ['value' => Session::getNewCSRFToken()]); ?>
                 <input type='hidden' name='add' value='1'>
                 
                 <!-- STEP 1 - Somente seleção da entidade -->
@@ -622,7 +634,7 @@ Html::header(
                         <span class="profile-modal-close">&times;</span>
                     </div>
                     <form method="post" id="profileSelectionForm">
-                        <?php echo Html::hidden('_glpi_csrf_token', ['value' => $token]); ?>
+                        <?php echo Html::hidden('_glpi_csrf_token', ['value' => Session::getNewCSRFToken()]); ?>
                         <input type="hidden" name="save_selected_profiles" value="1">
                         
                         <div class="profile-checkboxes">
@@ -656,6 +668,22 @@ Html::header(
             <script>
             const computersData = <?php echo json_encode(array_values($all_computers)); ?>;
             const blockedComputers = <?php echo json_encode($blocked_computers); ?>;
+            const parentEntityMap = <?php echo json_encode($parent_entities_map); ?>;
+
+            function isAncestorOrSame(ancestorId, descendantId) {
+                let current = parseInt(descendantId);
+                ancestorId = parseInt(ancestorId);
+                while (current >= 0) {
+                    if (current === ancestorId) {
+                        return true;
+                    }
+                    if (current === 0 || !parentEntityMap.hasOwnProperty(current)) {
+                        break;
+                    }
+                    current = parseInt(parentEntityMap[current]);
+                }
+                return false;
+            }
             
             $(document).ready(function() {
                 // Configuração de localização para português
@@ -828,7 +856,9 @@ Html::header(
                     select.find('option').not(':first').remove();
                     
                     const filteredComputers = computersData.filter(comp => {
-                        return comp.entities_id == entityId && 
+                        const isEntityMatch = parseInt(comp.entities_id) === parseInt(entityId) || 
+                                               (parseInt(comp.is_recursive) === 1 && isAncestorOrSame(comp.entities_id, entityId));
+                        return isEntityMatch && 
                                (!blockedComputers.includes(comp.id) || <?php echo $is_edit ? 'comp.id == ' . $item_data['items_id'] : 'false'; ?>);
                     });
                     
@@ -892,13 +922,16 @@ Html::header(
                         url: window.location.href,
                         type: 'POST',
                         data: $(this).serialize(),
+                        headers: {
+                            'X-Glpi-Csrf-Token': $('#profileSelectionForm input[name="_glpi_csrf_token"]').val()
+                        },
                         success: function(response) {
                             // Recarrega a página para atualizar a lista de técnicos
                             // Reloads page to update technicians list
                             window.location.reload();
                         },
-                        error: function() {
-                            alert('<?php echo __("Erro ao salvar a seleção de perfis"); ?>');
+                        error: function(xhr, status, error) {
+                            alert('Erro ao salvar a seleção de perfis: ' + xhr.status + ' - ' + xhr.statusText + '\n\nDetalhes:\n' + xhr.responseText);
                         }
                     });
                 });
@@ -908,7 +941,7 @@ Html::header(
         <!-- Rodapé personalizado -->
         <!-- Custom footer -->
         <div class="custom-footer">
-            <i class="fas fa-code"></i> <?= __('Desenvolvido por WIDA - Work Information Developments and Analytics') ?>
+            <i class="fas fa-code"></i> <?= __('Desenvolvido por GLPI Community') ?>
         </div>
     </div>
 </div>

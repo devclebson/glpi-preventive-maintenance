@@ -21,10 +21,9 @@
  *
  * Você deve ter recebido uma cópia da Licença Pública Geral GNU
  * junto com o Manutenção Preventiva. Se não, veja <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [URL do seu plugin ou repositório GitHub]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -49,10 +48,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with Preventive Maintenance. If not, see <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [Your Plugin URL or GitHub Repository]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 

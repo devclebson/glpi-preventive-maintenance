@@ -1,102 +1,60 @@
-# 🔧 Plugin de Manutenção Preventiva para GLPI
+# Plugin de Manutenção Preventiva para GLPI
 
-[![Licença GPLv2+](https://img.shields.io/badge/license-GPLv2+-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![Versão GLPI](https://img.shields.io/badge/GLPI-9.x%2F10.x-success)](https://glpi-project.org)
-[![GitHub Release](https://img.shields.io/github/v/release/willoliveiras/glpi-preventive-maintenance)](https://github.com/willoliveiras/glpi-preventive-maintenance/releases)
-[![GitHub Stars](https://img.shields.io/github/stars/willoliveiras/glpi-preventive-maintenance?style=social)](https://github.com/willoliveiras/glpi-preventive-maintenance/stargazers)
-
-Plugin para gestão automatizada de manutenções preventivas no GLPI
+Este plugin foi desenvolvido para agendar, monitorar e automatizar manutenções preventivas de computadores no GLPI.
 
 ---
 
-## 🌟 Recursos Principais
+## 📌 Visão Geral
 
-✔ Cadastro de planos de manutenção por entidade
+O plugin permite criar planos de manutenção recorrentes para computadores e automatiza a geração de chamados de suporte técnico, ajudando a garantir que os equipamentos recebam as manutenções preventivas programadas nos prazos corretos.
 
-✔ Alertas visuais 
+### Funcionalidades Principais:
+*   ✔ **Interface Unificada em Abas (Tabs):** Painel, Nova Manutenção, Chamados Gerados e Configurações centralizados em um único local operacional.
+*   ✔ **Visual Moderno e Modo Escuro:** Interface 100% migrada para Bootstrap 5 e componentes Tabler nativos do GLPI 11.
+*   ✔ **Alertas Visuais e Barra de Progresso:** Status visual baseado no tempo restante para o vencimento (✅ Em dia / ⚠️ Atenção / ❌ Urgente).
+*   ✔ **Ação Automática (CronTask):** Geração automática de chamados integrada nativamente às ações agendadas do GLPI.
+*   ✔ **Fluxo de Conclusão Prático:** Finalize a manutenção e feche o chamado associado informando o procedimento executado diretamente da tabela.
+*   ✔ **Suporte a Ativos Recursivos:** Suporta computadores herdados de entidades ancestrais/pai com a propriedade recursiva habilitada.
 
-✔ Geração automática de tickets para manutenções urgentes
+---
 
-✔ Atualização automatica da data de manutenção assim que o chamado é resolvido
+## 🚀 Instalação e Configuração
 
-✔ Lista de manutenção separada por entidade
+### Requisitos:
+*   **GLPI:** Versão 9.x, 10.x ou 11.x (Homologado e compatibilizado para GLPI 11)
+*   **PHP:** Versão 7.4 ou superior (Compatível com PHP 8.x)
 
+### Passos para Instalação:
+1.  Extraia o diretório na pasta de plugins do seu GLPI:  
+    `/var/www/glpi/plugins/preventivemaintenance`
+2.  Acesse o GLPI no menu **Configurações > Plugins** (ou **Setup > Plugins**).
+3.  Instale e ative o plugin **Manutenção Preventiva**.
+4.  O plugin passará a estar disponível no menu principal em:  
+    **Ferramentas > Manutenção Preventiva** (ou **Tools > Preventive Maintenance**).
+5.  Configure o perfil dos técnicos em **Configurações > Perfis** para liberar os acessos de escrita, leitura e exclusão do plugin.
 
-🔧 Funcionalidades Principais
---
+### Ação Automática:
+Para que a verificação de prazos e a geração de chamados ocorra em segundo plano de forma contínua:
+1.  Acesse **Administração > Ações Automáticas** (ou **Administration > Automatic Actions**).
+2.  Localize a ação `preventivemaintenance`.
+3.  Defina o modo de execução como **CLI** (recomendado via cron do servidor) ou **GLPI** (via tráfego de usuários).
 
+---
 
-1. Agendamento Inteligente
-    Defina intervalos personalizados (diário, semanal, mensal, anual)
+## 📂 Documentação do Projeto
 
-2. Calendário interativo com cálculo automático de datas
+Para informações detalhadas sobre a migração de compatibilidade efetuada para o GLPI 11 e o relatório de melhorias implementadas, consulte a pasta [docs/](file:///var/www/glpi/plugins/preventivemaintenance/docs/):
 
-3. Automatização
-    Tickets automáticos para manutenções atrasadas (configurável)
+*   [Relatório de Melhorias](file:///var/www/glpi/plugins/preventivemaintenance/docs/relatorio_de_melhorias.md): Resumo de todas as melhorias visuais, de segurança e de recursos aplicados.
+*   [Walkthrough Técnico](file:///var/www/glpi/plugins/preventivemaintenance/docs/walkthrough.md): Documento contendo as 21 modificações técnicas realizadas no código-fonte do plugin para compatibilidade e evolução.
 
-4. Atualização da data de manutenção automatica se Ticketsautomaticos estiver habilitado
+---
 
-5. Status visual por cores (✅ Em dia / ⚠️ Atenção / ❌ Urgente)
+## 📜 Licença
 
-6. Filtros por técnico, entidade ou data
+Licenciado sob GNU GPLv2+ - Ver arquivo LICENSE para a licença completa.
 
-7. Progresso em porcentagem para cada item
+*Desenvolvido por:*  
+**GLPI Community**
 
-8. Auto Ticket: Habilite/desative a criação automática
-
-9. Permissões: Controle acesso por perfil (leitura, edição, exclusão)
-
-
- 🚀 Instalação
---
-
-1. Baixe a última versão [aqui](https://github.com/willoliveiras/glpi-preventive-maintenance/releases)
-2. Extraia para: `/glpi/plugins/preventivemaintenance`
-3. Ative em: `Configurações > Plugins`
-4. Configure: Administração > Perfis > [seu usuario]> Manutenção Preventiva
-
-
-📸 Demonstração
---
-
-Painel Principal	
-![principal](https://github.com/user-attachments/assets/039e387d-f9f8-4fb2-a325-9a34970950e3)
-
-Chamados automaticos
-![chamados](https://github.com/user-attachments/assets/35cbd741-942a-4aa9-90bf-4ebfd2f22c83)
-
-Cadastro de Nova manutenção
-![image](https://github.com/user-attachments/assets/0e2d4224-62ae-4b1c-846e-882feec4b375)
-
-Configurações
-![image](https://github.com/user-attachments/assets/15aec9dd-a8a1-4b79-b010-813d3f544902)
-
-
-💰 Ajude Este Projeto
---
-
-Se esse projeto te ajudou,
-mantenha este plugin ativo com uma doação via PIX:
-
-![IMG_20250528_212814 (1)](https://github.com/user-attachments/assets/0bceee5a-fbd5-4807-85e5-55222f45917d)
-
-
-
-Ou, se preferir, você pode copiar o código PIX da imagem abaixo:
-
-    
-    00020126720014BR.GOV.BCB.PIX0136db70b7e3-711a-4774-8884-7275386521e40210Obrigado!!5204000053039865802BR5925William de Oliveira Santo6009SAO PAULO621405101SdXWYH7RP6304D3A2
-
-
-📜 Licença
---
-Licenciado sob GNU GPLv2+
-
-Desenvolvido por:
-© 2025 WIDA - Work Information Development Analytics
-
-www.widatecnologia.com.br
-
-🔧 Manutenção preventiva = Menos falhas + Mais produtividade!
---
-
+*🔧 Manutenção preventiva = Menos falhas + Mais produtividade!*

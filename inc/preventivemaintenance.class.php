@@ -21,10 +21,9 @@
  *
  * Você deve ter recebido uma cópia da Licença Pública Geral GNU
  * junto com o Manutenção Preventiva. Se não, veja <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [URL do seu plugin ou repositório GitHub]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -49,10 +48,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with Preventive Maintenance. If not, see <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [Your Plugin URL or GitHub Repository]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -144,39 +142,39 @@ class PluginPreventivemaintenancePreventivemaintenance extends CommonDBTM {
     * Verifica permissão de criação
     * Checks create permission
     */
-   static function canCreate() {
-      return Session::haveRight(self::$rightname, CREATE);
-   }
-
-   /**
-    * Verifica permissão de visualização
-    * Checks view permission
-    */
-   static function canView() {
-      return Session::haveRight(self::$rightname, READ);
-   }
-
-   /**
-    * Verifica permissão de atualização
-    * Checks update permission
-    */
-   static function canUpdate() {
-      return Session::haveRight(self::$rightname, UPDATE);
-   }
-
-   /**
-    * Verifica permissão de exclusão (com tratamento especial para Super-Admin)
-    * Checks delete permission (with special handling for Super-Admin)
-    */
-   static function canDelete() {
-    // Permissão sempre verdadeira para Super-Admin
-    // Always true for Super-Admin
-    if (isset($_SESSION['glpiactiveprofile']['name']) && 
-        $_SESSION['glpiactiveprofile']['name'] == 'Super-Admin') {
-        return true;
+    public static function canCreate(): bool {
+       return Session::haveRight(self::$rightname, CREATE);
     }
-    return Session::haveRight(self::$rightname, DELETE);
-   }
+ 
+    /**
+     * Verifica permissão de visualização
+     * Checks view permission
+     */
+    public static function canView(): bool {
+       return Session::haveRight(self::$rightname, READ);
+    }
+ 
+    /**
+     * Verifica permissão de atualização
+     * Checks update permission
+     */
+    public static function canUpdate(): bool {
+       return Session::haveRight(self::$rightname, UPDATE);
+    }
+ 
+    /**
+     * Verifica permissão de exclusão (com tratamento especial para Super-Admin)
+     * Checks delete permission (with special handling for Super-Admin)
+     */
+    public static function canDelete(): bool {
+     // Permissão sempre verdadeira para Super-Admin
+     // Always true for Super-Admin
+     if (isset($_SESSION['glpiactiveprofile']['name']) && 
+         $_SESSION['glpiactiveprofile']['name'] == 'Super-Admin') {
+         return true;
+     }
+     return Session::haveRight(self::$rightname, DELETE);
+    }
 
    /**
     * Exibe o formulário de cadastro/edição
@@ -435,5 +433,345 @@ class PluginPreventivemaintenancePreventivemaintenance extends CommonDBTM {
       return parent::getSearchResultNew($field, $values, $options);
       error_log("getSearchResult: $field");
    }
-   
+
+   public static function getPluginConfig($name) {
+      global $DB;
+      
+      $criteria = [
+          'SELECT' => ['value'],
+          'FROM' => 'glpi_plugin_preventivemaintenance_config',
+          'WHERE' => ['name' => $name],
+          'LIMIT' => 1
+      ];
+      
+      $iterator = $DB->request($criteria);
+      
+      if (count($iterator)) {
+          $data = $iterator->current();
+          return $data['value'];
+      }
+      
+      return false;
+   }
+
+   public static function updatePluginConfig($name, $value) {
+      global $DB;
+      
+      $existing = self::getPluginConfig($name);
+      $now = date('Y-m-d H:i:s');
+      
+      if ($existing !== false) {
+          return $DB->update('glpi_plugin_preventivemaintenance_config', [
+              'value' => $value,
+              'date_mod' => $now
+          ], [
+              'name' => $name
+          ]);
+      } else {
+          return $DB->insert('glpi_plugin_preventivemaintenance_config', [
+              'name' => $name,
+              'value' => $value,
+              'date_creation' => $now,
+              'date_mod' => $now
+          ]);
+      }
+   }
+
+   public static function hasOpenMaintenanceTicket($computer_id, $maintenance_name) {
+       global $DB;
+       
+       if (empty($computer_id) || !is_numeric($computer_id) || empty($maintenance_name)) {
+           return false;
+       }
+       
+       try {
+           $criteria = [
+               'SELECT' => ['glpi_tickets.id'],
+               'FROM' => 'glpi_tickets',
+               'INNER JOIN' => [
+                   'glpi_items_tickets' => [
+                       'ON' => [
+                           'glpi_items_tickets' => 'tickets_id',
+                           'glpi_tickets' => 'id'
+                       ]
+                   ]
+               ],
+               'WHERE' => [
+                   'glpi_items_tickets.items_id' => (int)$computer_id,
+                   'glpi_items_tickets.itemtype' => 'Computer',
+                   'glpi_tickets.name' => ['LIKE', '%' . $DB->escape($maintenance_name) . '%'],
+                   ['NOT' => ['glpi_tickets.status' => [Ticket::CLOSED, Ticket::SOLVED]]]
+               ],
+               'LIMIT' => 1
+           ];
+           
+           $iterator = $DB->request($criteria);
+           
+           if (count($iterator)) {
+               return true;
+           }
+           
+            $criteria = [
+                'SELECT' => ['glpi_plugin_preventivemaintenance_tickets.id'],
+                'FROM' => 'glpi_plugin_preventivemaintenance_tickets',
+                'INNER JOIN' => [
+                    'glpi_tickets' => [
+                        'ON' => [
+                            'glpi_plugin_preventivemaintenance_tickets' => 'ticket_id',
+                            'glpi_tickets' => 'id'
+                        ]
+                    ]
+                ],
+                'WHERE' => [
+                    'glpi_plugin_preventivemaintenance_tickets.computer_id' => (int)$computer_id,
+                    'glpi_plugin_preventivemaintenance_tickets.maintenance_name' => $maintenance_name,
+                    ['NOT' => ['glpi_tickets.status' => [Ticket::CLOSED, Ticket::SOLVED]]]
+                ],
+                'LIMIT' => 1
+            ];
+            
+            $iterator = $DB->request($criteria);
+            
+            return count($iterator) > 0;
+       } catch (Exception $e) {
+           Toolbox::logInFile('php-errors', "Erro ao verificar tickets existentes: " . $e->getMessage() . "\n");
+           return false;
+       }
+   }
+
+   public static function registerMaintenanceTicket($ticket_id, $computer_id, $maintenance_name) {
+      global $DB;
+      
+      try {
+          $DB->insert('glpi_plugin_preventivemaintenance_tickets', [
+              'ticket_id' => (int)$ticket_id,
+              'computer_id' => (int)$computer_id,
+              'maintenance_name' => $maintenance_name,
+              'date_creation' => date('Y-m-d H:i:s')
+          ]);
+          return true;
+      } catch (Exception $e) {
+          Toolbox::logInFile('php-errors', "Erro ao registrar o ticket: " . $e->getMessage() . "\n");
+          return false;
+      }
+   }
+
+   public static function updateMaintenanceOnTicketResolution($ticket_id) {
+      global $DB;
+      
+      try {
+          $criteria = [
+              'SELECT' => ['computer_id', 'maintenance_name'],
+              'FROM' => 'glpi_plugin_preventivemaintenance_tickets',
+              'WHERE' => [
+                  'ticket_id' => (int)$ticket_id
+              ],
+              'LIMIT' => 1
+          ];
+          
+          $iterator = $DB->request($criteria);
+          
+          if (count($iterator)) {
+              $data = $iterator->current();
+              $computer_id = $data['computer_id'];
+              $maintenance_name = $data['maintenance_name'];
+              
+              $pm = new self();
+              $maintenance = $pm->find([
+                  'items_id' => $computer_id,
+                  'name' => $maintenance_name
+              ]);
+              
+              if (count($maintenance)) {
+                  $maintenance_data = current($maintenance);
+                  $maintenance_id = $maintenance_data['id'];
+                  
+                  $ticket = new Ticket();
+                  if ($ticket->getFromDB($ticket_id)) {
+                      $solvedate = $ticket->getField('solvedate');
+                      
+                      if (!empty($solvedate)) {
+                          $interval_days = (int)$maintenance_data['maintenance_interval'];
+                          if ($interval_days <= 0) {
+                              $interval_days = 30; // default to 30 days
+                          }
+                          
+                          $new_next_date = date('Y-m-d H:i:s', strtotime($solvedate) + ($interval_days * 24 * 60 * 60));
+                          
+                          $input = [
+                              'id' => $maintenance_id,
+                              'name' => $maintenance_name,
+                              'last_maintenance_date' => $solvedate,
+                              'next_maintenance_date' => $new_next_date
+                          ];
+                          
+                          if ($pm->update($input)) {
+                              $DB->delete('glpi_plugin_preventivemaintenance_tickets', [
+                                  'ticket_id' => $ticket_id
+                              ]);
+                              return true;
+                          }
+                      }
+                  }
+              }
+          }
+          return false;
+      } catch (Exception $e) {
+          Toolbox::logInFile('php-errors', "Erro ao atualizar a manutenção: " . $e->getMessage() . "\n");
+          return false;
+      }
+   }
+
+    public static function cleanResolvedMaintenanceTickets() {
+       global $DB;
+       
+       try {
+           // Clean up orphaned tickets that no longer exist in GLPI tickets table
+           $sub_query = new \Glpi\DBAL\QuerySubQuery([
+               'SELECT' => ['id'],
+               'FROM'   => 'glpi_tickets'
+           ]);
+           $DB->delete('glpi_plugin_preventivemaintenance_tickets', [
+               'NOT' => ['ticket_id' => $sub_query]
+           ]);
+
+           $criteria = [
+              'SELECT' => ['glpi_tickets.id', 'glpi_tickets.solvedate'],
+              'FROM' => 'glpi_tickets',
+              'INNER JOIN' => [
+                  'glpi_plugin_preventivemaintenance_tickets' => [
+                      'ON' => [
+                          'glpi_plugin_preventivemaintenance_tickets' => 'ticket_id',
+                          'glpi_tickets' => 'id'
+                      ]
+                  ]
+              ],
+              'WHERE' => [
+                  'glpi_tickets.status' => [Ticket::CLOSED, Ticket::SOLVED]
+              ]
+          ];
+          
+          $iterator = $DB->request($criteria);
+          
+          foreach ($iterator as $data) {
+              self::updateMaintenanceOnTicketResolution($data['id']);
+              
+              $DB->delete('glpi_plugin_preventivemaintenance_tickets', [
+                  'ticket_id' => $data['id']
+              ]);
+          }
+          
+          return true;
+      } catch (Exception $e) {
+          Toolbox::logInFile('php-errors', "Erro ao limpar tickets resolvidos: " . $e->getMessage() . "\n");
+          return false;
+      }
+   }
+
+   public static function createMaintenanceTicket($computer_id, $maintenance_name, $technician_id, $entity_id = 0) {
+      if (self::hasOpenMaintenanceTicket($computer_id, $maintenance_name)) {
+          return false;
+      }
+      
+      $ticket = new Ticket();
+      
+      $input = [
+          'name' => sprintf(__('Preventive maintenance required: %s'), $maintenance_name),
+          'content' => sprintf(__('Computer requires preventive maintenance for: %s'), $maintenance_name),
+          'items_id' => [
+              'Computer' => [(int)$computer_id]
+          ],
+          'itemtype' => 'Computer',
+          'type' => Ticket::INCIDENT_TYPE,
+          'status' => Ticket::INCOMING,
+          'urgency' => 5,
+          'impact' => 5,
+          'priority' => 5,
+          'requesttypes_id' => 1,
+          'users_id_recipient' => class_exists('Session') ? Session::getLoginUserID() : 0,
+          'entities_id' => $entity_id ?: (isset($_SESSION['glpiactive_entity']) ? $_SESSION['glpiactive_entity'] : 0),
+          'date' => date('Y-m-d H:i:s')
+      ];
+      
+      if (!empty($technician_id)) {
+          $input['_observers']['_users_id_observer'] = [(int)$technician_id];
+      }
+      
+      try {
+          $ticket_id = $ticket->add($input);
+          if ($ticket_id) {
+              self::registerMaintenanceTicket($ticket_id, $computer_id, $maintenance_name);
+              return $ticket_id;
+          }
+          return false;
+      } catch (Exception $e) {
+          Toolbox::logInFile('php-errors', "Erro ao criar o ticket: " . $e->getMessage() . "\n");
+          return false;
+      }
+   }
+
+   public static function updateMaintenanceAfterTicket($ticket) {
+      if (!($ticket instanceof Ticket)) {
+         return;
+      }
+      $ticket_id = $ticket->getID();
+      $status = $ticket->getField('status');
+      if (in_array($status, [Ticket::SOLVED, Ticket::CLOSED])) {
+         self::updateMaintenanceOnTicketResolution($ticket_id);
+      }
+   }
+
+   static function cronInfo($name) {
+      switch ($name) {
+         case 'preventivemaintenance':
+            return [
+               'description' => __('Gera chamados de manutenção preventiva pendentes', 'preventivemaintenance')
+            ];
+      }
+      return [];
+   }
+
+   static function cronPreventivemaintenance($task) {
+      $auto_ticket = self::getPluginConfig('auto_ticket');
+      if ($auto_ticket !== '1') {
+         return 0; // Not enabled
+      }
+      
+      self::cleanResolvedMaintenanceTickets();
+      
+      $pm = new self();
+      $all_maintenances = $pm->find([], 'next_maintenance_date ASC');
+      
+      $processed = 0;
+      foreach ($all_maintenances as $item) {
+         if (!empty($item['last_maintenance_date']) && !empty($item['next_maintenance_date'])) {
+            $last = strtotime($item['last_maintenance_date']);
+            $next = strtotime($item['next_maintenance_date']);
+            $now = time();
+            
+            $total_days = $next - $last;
+            $elapsed_days = $now - $last;
+            
+            if ($total_days > 0) {
+               $percent = min(100, max(0, round(($elapsed_days / $total_days) * 100)));
+               
+               if ($percent >= 99) {
+                  $ticket_id = self::createMaintenanceTicket(
+                     $item['items_id'],
+                     $item['name'],
+                     $item['technician_id'],
+                     $item['entities_id']
+                  );
+                  if ($ticket_id) {
+                     $processed++;
+                     $task->addVolume(1);
+                  }
+               }
+            }
+         }
+      }
+      
+      return $processed > 0 ? 1 : 0;
+   }
+
 }

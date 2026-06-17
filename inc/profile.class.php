@@ -21,10 +21,9 @@
  *
  * Você deve ter recebido uma cópia da Licença Pública Geral GNU
  * junto com o Manutenção Preventiva. Se não, veja <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [URL do seu plugin ou repositório GitHub]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -49,10 +48,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with Preventive Maintenance. If not, see <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2025 William Oliveira Santos / WIDA Work Information Development Analytics
- * @license   GPLv2+ https://www.gnu.org/licenses/gpl-2.0.html
- * @link      [Your Plugin URL or GitHub Repository]
+ * @copyright Copyright (C) 2026 GLPI Community
+ * @license   GPLv2+
+ * @link      https://example.com
  * -------------------------------------------------------------------------
  */
 
@@ -143,14 +141,11 @@ class PluginPreventivemaintenanceProfile extends Profile {
    public static function initProfile() {
    global $DB;
 
-   $profile = new self();
-   $dbu = new DbUtils();
-
    $default_rights = ['plugin_preventivemaintenance'];
 
    // Adiciona direitos para todos os perfis se não existirem
    foreach ($default_rights as $right) {
-      if ($dbu->countElementsInTable("glpi_profilerights", ["name" => $right]) == 0) {
+      if (countElementsInTable("glpi_profilerights", ["name" => $right]) == 0) {
          ProfileRight::addProfileRights([$right]);
          
          // Define permissões padrão para todos os perfis
